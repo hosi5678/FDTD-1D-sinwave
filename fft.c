@@ -1,22 +1,71 @@
-/********* FFTを行う関数  ************************************/
-/* 入力:x[Nsample]:実数入力波形（振幅）,Nsample:データの数 ***/
-/*************************************************************/
-
 #include "fft.h"
 #include "calc_param.h"
+#include "put_memo.h"
 
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
-void fft(double *x,int Nsample){
+//       usage 
+//       wave:array of wave source input
+//       Nsample:length of data of wave
+//       file_name:file name to create  
+//       fft(wave,16384,"gaussian.csv")
 
-   int i,j,k,k1,num,nhalf,phi,phi0;
+void swap(double *a,double *b){
+
+	double temp;
+
+/*
+	temp a b
+	 a   a b
+	 a   b b
+	 a   b a
+*/
+	temp=*a;
+
+	*a=*b;
+
+	*b=temp;
+}
+
+void fft(double *wave,int Nsample,char *file_name){
+
+	FILE *fp;
+
+   int k1,num,nhalf,phi,phi0;
 	int *rot;
 
-   double s,sc,c,a0,b0,tmp;
+   double s,sc,c,a0,b0;
 	double *y;
+	double *power;
+
+	int check;
+
+	check=Nsample;
+
+	while(check>1){
+		if(check%2==1){
+			printf("fft data size error(not power of 2).\n");
+			exit(1);
+		}
+
+		check>>=1;
+
+	}
+
+	fp=fopen(file_name,"w");
+
+	if(fp==NULL){
+		printf("file open error(fft).\n");
+		exit(1);
+	}
+	
+   put_memo(fp,file_name);
+
+	power=calloc(Nsample,sizeof(double));
 
 	rot=calloc(sizeof(int),Nsample);
 	y=calloc(sizeof(double),Nsample);
@@ -26,9 +75,11 @@ void fft(double *x,int Nsample){
 
 	sc=2.0*pi/Nsample;
 
+   printf("  fft caluculation start.\n");
+
    while(num>=1){
 
-      for(j=0;j<Nsample;j+=2*num){
+      for(int j=0;j<Nsample;j+=2*num){
 
          phi=rot[j]/2;    
 			phi0=phi+nhalf;  
@@ -36,17 +87,17 @@ void fft(double *x,int Nsample){
 			c=cos(sc*phi);   
 			s=-sin(sc*phi);
 
-         for(k=j; k<j+num; k++){
+         for(int k=j;k<j+num;k++){
 
             k1=k+num;
 
-            a0=x[k1]*c-y[k1]*s; 
-				b0=x[k1]*s+y[k1]*c;
+            a0=wave[k1]*c-y[k1]*s; 
+				b0=wave[k1]*s+y[k1]*c;
 
-            x[k1]=x[k]-a0;      
+            wave[k1]=wave[k]-a0;      
 				y[k1]=y[k]-b0;
 
-            x[k]=x[k]+a0;       
+            wave[k]=wave[k]+a0;       
 				y[k]=y[k]+b0;
 
             rot[k]=phi;           
@@ -58,33 +109,30 @@ void fft(double *x,int Nsample){
       num=num/2;
    }
 
-   for(i=0;i<Nsample-1;i++){
+   for(int i=0;i<Nsample-1;i++){
+		int j;
       if((j=rot[i])>i){
-        tmp=x[i]; 
-		  x[i]=x[j]; 
-		  x[j]=tmp;
-        tmp=y[i];
-		  y[i]=y[j];
-		  y[j]=tmp;
+			
+			swap(&wave[i],&wave[j]);
+			swap(&y[i],&y[j]);
+
       }
+	
+		wave[i]=sqrt(pow(wave[i],2.0)+pow(y[i],2.0))/Nsample;
+
    }
 
-	FILE *fp;
-
-	char *file_name="fft_w.csv";
-
-	fp=fopen(file_name,"w");
-
-	if(fp==NULL){
-		printf("file open error.\n");
-		exit(1);
-	}
-
 	for(int i=0;i<(Nsample/2);i++){
-		fprintf(fp,"%.20f\n",sqrt(pow(x[i],2.0)+pow(y[i],2.0)));
+		fprintf(fp,"%d,%.5e\n",i,wave[i]);
 	}
 
 	fclose(fp);
+
+   printf("  fft caluculation finished.\n");
+
+	free(power);
+	free(rot);
+	free(y);
 
 }
 

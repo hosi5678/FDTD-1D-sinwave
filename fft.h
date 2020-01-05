@@ -1,3 +1,3 @@
 #pragma once
 
-void fft(double *,int);
+void fft(double *,int,char *);

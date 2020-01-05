@@ -1,17 +1,18 @@
 #include "setsinwave.h"
 #include "calc_param.h"
+#include "put_memo.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 
-void setsinwave(double *Iz){
+void setsinwave(double *J){
 
 	char *file_name="sinwave.csv";
 	FILE *fp;
 
 	for(int i=0;i<timestep;i++){
-		Iz[i]=I0*sin(2.0*pi*i*26/timestep);
+		J[i]=I0*sin(2.0*pi*i*angular_frequency_num/fft_data_length);
 	}
 
 	fp=fopen(file_name,"w");
@@ -21,8 +22,10 @@ void setsinwave(double *Iz){
 		exit(1);
 	}
 
+	fp=put_memo(fp,file_name);
+
 	for(int i=0;i<timestep;i++){
-		fprintf(fp,"%d,%.30f\n",i,Iz[i]);
+		fprintf(fp,"%d,%.5e\n",i,J[i]);
 	}
 
 	fclose(fp);

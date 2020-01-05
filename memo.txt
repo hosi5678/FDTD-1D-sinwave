@@ -1,0 +1,15 @@
+memo,datetime:Thu Jan  2 11:47:08 2020
+memo,select_wave:0
+memo,wave type=Gaussian
+memo,I0:1.000000e-03
+memo,alpha:1.0000000000e-02
+memo,cellsize:61
+memo,timestep:100000
+memo,data_length:1024
+memo,fft_index:10
+memo,dt_margin:9.5000000000e-01
+memo,t0:500
+memo,dx:2.0000000000e-08
+memo,dt:6.3377178088e-17
+memo,dw:9.9139556174e+11
+memo,angular frequency num:0

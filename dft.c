@@ -1,27 +1,35 @@
-/********* DFTを行う関数 *************************************/
-/* 入力:x[Nsample]:実数入力波形（振幅）,Nsample:データの数 ***/
-/*************************************************************/
-
 #include "calc_param.h"
+#include "set_calc_param.h"
 #include "dft.h"
+#include "put_memo.h"
 
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
-void dft(double *x,int Nsample){
+//       usage 
+//       wave:array of wave source input
+//       Nsample:length of data wave
+//       file_name:file name to create  
+//       dft(wave,5000,"gaussian.csv")
 
-	char *file_name="dft_w.csv";
+void dft(double *wave,int Nsample,char *file_name){
 
 	FILE *fp;
 
+	double *power;
+
 	fp=fopen(file_name,"w");
 
-	if(fp==NULL){
+	power=calloc(Nsample,sizeof(double));
+
+	if(NULL==fp){
 		printf("file open error.\n");
 		exit(1);
 	}
+
+	fp=put_memo(fp,file_name);
 
     for(int t=0; t<Nsample; t++) {
 
@@ -29,12 +37,15 @@ void dft(double *x,int Nsample){
         double imaginary = 0.0;
 
         for(int k=0; k<Nsample; k++) {
-            real += x[k]*cos(2*pi*k*t/Nsample);
-            imaginary += -x[k]*sin(2*pi*k*t/Nsample);
+            real += wave[k]*cos(2*pi*k*t/Nsample);
+            imaginary += -wave[k]*sin(2*pi*k*t/Nsample);
+
         }
+		
+			power[t]=sqrt(pow(real,2.0)+pow(imaginary,2.0))/Nsample;
 
 		if(t<Nsample/2){
-        fprintf(fp,"%.50f\n",sqrt(pow(real,2.0)+pow(imaginary,2.0))/Nsample);
+			fprintf(fp,"%d,%.5e\n",t,power[t]);
 		}
 
     }

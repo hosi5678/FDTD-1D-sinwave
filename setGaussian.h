@@ -1,3 +1,3 @@
 #pragma once
 
-void setGaussian(double *);
+void setgaussian(double *);

@@ -32,9 +32,6 @@ endif
 #［例］ gcc -Wall -o prog prog.c
 
 $(TARGET) : $(OBJECTS)
-	$(RM) *.avi
-	$(RM) *.mp4
-	$(RM) *.csv
 	$(CC) $(CFLAGS) $^ $(LDLIBS) -o $@
 	./$(TARGET)
 	$(RM) *.o

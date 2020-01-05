@@ -6,6 +6,11 @@
 *.exe
 *.csv
 *.py
+*.sh
+*.zip
+make.sh
+main
+nkf_memo.txt
 /animation/
 /bak/
 /png/

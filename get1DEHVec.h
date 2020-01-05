@@ -1,3 +1,3 @@
 #pragma once
 
-double *get1DEHVec(double *,double *,double *);
+void get1DEHVec(double *,double *,double *);

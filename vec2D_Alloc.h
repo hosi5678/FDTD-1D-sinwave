@@ -1,3 +1,3 @@
 #pragma once
 
-double **vec2D_Alloc(int,int);
+double **vec2d_alloc(int,int);

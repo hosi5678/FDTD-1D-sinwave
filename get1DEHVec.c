@@ -1,16 +1,18 @@
 #include "get1DEHVec.h"
-#include "vec2D_Alloc.h"
+#include "vec2d_Alloc.h"
 #include "calc_param.h"
 #include "set_calc_param.h"
 #include "setConst.h"
 #include "dft.h"
 #include "fft.h"
-#include "createPPMs1D.h"
+#include "put_memo.h"
+#include "get_peak.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-double *get1DEHVec(double *Ey,double *Hz,double *J){
+void get1DEHVec(double *Ey,double *Hz,double *J){
 
 	// algorighm
 
@@ -19,32 +21,46 @@ double *get1DEHVec(double *Ey,double *Hz,double *J){
 	//      -((2*dt)/(2*eps[i]+sigma[i]*dt))*J[t][i]
 
    // i=1,2,.....,x_cellsize-1
-	// Ey[0]=0,Ey[x_cellsize]=0
+	// termination condition Ey[0]=0.0, Ey[x_cellsize]=0.0
 
 	// Hz[i]=Hz[i]-(dt/(u0*dx))*(Ey[i+1]-Ey[i]);
 
 	// i=0,1,2,,,,,,x_cellsize-1
 
-	static double *sigma;
-	static double *eps;
+	double *sigma;
+	double *eps;
 
-	// double ppm_gain;
-   //	ppm_gain=3.0e10;
+	double **eyt_plane;
+	double *eyt_x;
 
-	double **Eyt;
-	double *Et;
+	FILE *fp;
 
-	sigma=calloc(Ey_length,sizeof(double));
+	char *eyt_plane_file_name="eyt_plane.csv";
+	char *eyt_x_wave_file_name="eyt_x.csv";
+
+	sigma=calloc((unsigned int)Ey_length,sizeof(double));
 	setConst(sigma,Ey_length,0.0);
 
-	eps=calloc(Ey_length,sizeof(double));
+	eps=calloc((unsigned int)Ey_length,sizeof(double));
 	setConst(eps,Ey_length,eps0);
 	
 	double J_excite=0.0;
 
-	Eyt=vec2D_Alloc(timestep,Ey_length);
+	eyt_plane=vec2d_alloc(timestep,Ey_length);
 
-	Et=calloc(timestep,sizeof(double));
+	if(NULL==eyt_plane){
+		printf("eyt plane memory allocation failed.\n");
+		exit(1);
+	}
+
+	eyt_x=calloc((unsigned int)timestep,sizeof(double));
+
+	if(NULL==eyt_x){
+		printf("eyt(x) memory allocation failed.\n");
+		exit(1);
+	}
+
+ 	 printf("fdtd caluculation start.\n");
 
 	for(int t=0;t<timestep;t++){
 
@@ -60,8 +76,8 @@ double *get1DEHVec(double *Ey,double *Hz,double *J){
             -((2*dt)/((2*eps[x]+sigma[x]*dt)*dx))*(Hz[x]-Hz[x-1]) \
 		      -((2*dt)/(2*eps[x]+sigma[x]*dt))*J_excite;
 
-				Eyt[t][x]=Ey[x];
-				Et[t]=Eyt[t][excite_point_x];
+				eyt_plane[t][x]=Ey[x];
+				eyt_x[t]=Ey[excite_point_x];
 
 		}
 
@@ -71,44 +87,91 @@ double *get1DEHVec(double *Ey,double *Hz,double *J){
 		
 	}
 
-	FILE *fp;
+   printf("all fdtd caluculations were finished.\n");
 
-	fp=fopen("Eyt_plane.csv","w");
+	free(eps);
+	free(sigma);
 
-	if(fp==NULL){
-		printf("file open error(Ey(t)(plane).csv).\n");
+	fp=fopen(eyt_plane_file_name,"w");
+
+	if(NULL==fp){
+		printf("file open error (%s).\n",eyt_plane_file_name);
 		exit(1);
 	}
 
+	put_memo(fp,eyt_plane_file_name);
+
 	for(int t=0;t<timestep;t++){
 		for(int x=0;x<Ey_length;x++){
-			fprintf(fp,"%.50f,",Eyt[t][x]);
+
+			if(x==Ey_length-1){
+				fprintf(fp,"%.5e",eyt_plane[t][x]);	
+			}else{
+				fprintf(fp,"%.5e,",eyt_plane[t][x]);
+			}
+
 		}
 			fprintf(fp,"\n");
 	}
 
 	fclose(fp);
 
-	fp=fopen("Eyt_x.csv","w");
+	printf("%s was created.\n",eyt_plane_file_name);
 
-	if(fp==NULL){
-		printf("file open error(Ey(t)(excitation point).csv).\n");
+	free(eyt_plane);
+
+	fp=fopen(eyt_x_wave_file_name,"w");
+
+	put_memo(fp,eyt_x_wave_file_name);
+
+	if(NULL==fp){
+		printf("file open error(%s).\n",eyt_x_wave_file_name);
 		exit(1);
 	}
 
 	for(int t=0;t<timestep;t++){
-		fprintf(fp,"%.50f\n",Eyt[t][excite_point_x]);
+		fprintf(fp,"%d,%.5e\n",t,eyt_x[t]);
 	}
-
-/*	createPPMs1D(Eyt,timestep,ppm_gain); */
-
-	dft(Et,timestep);
 
 	fclose(fp);
 
-	free(Eyt);
-	free(Et);
+	printf("%s was created.\n",eyt_x_wave_file_name);
 
-	return Ey;
+	if(wave_selection==0){
+
+		char fft_file_name[50];
+		char diff_fft_file_name[50];
+
+		double *fft_wave;
+
+		sprintf(fft_file_name,"fft_%s",eyt_x_wave_file_name);
+	
+		fft_wave=calloc((unsigned int)fft_data_length,sizeof(double));
+
+		if(NULL==fft_wave){
+			printf("fft wave memory error.\n");
+			exit(1);
+		}
+
+		for(int i=0;i<fft_data_length;i++){
+			fft_wave[i]=eyt_x[i+fft_t_start];
+		}
+	
+		fft(fft_wave,fft_data_length,fft_file_name);
+
+		printf("fft_file_name(%s) was created.\n",fft_file_name);
+
+		sprintf(diff_fft_file_name,"diff_fft_%s",eyt_x_wave_file_name);
+
+		get_peak(fft_wave,fft_data_length,diff_fft_file_name);
+
+		printf("peak file(%s)was created.\n",diff_fft_file_name);
+
+		free(fft_wave);
+
+	}
+
+	free(eyt_x);
+   fclose(fp);
 
 }

@@ -1,3 +1,3 @@
 #pragma once
 
-void dft(double *,int);
+void dft(double *,int,char *);
